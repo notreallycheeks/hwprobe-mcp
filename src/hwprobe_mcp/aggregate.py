@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import deps
 from .collectors import inventory as inv
 from .collectors import lmsensors, nvidia, psutil_col, smart
 from .util import IS_LINUX, envelope
@@ -28,6 +29,10 @@ def live_sensors() -> dict[str, Any]:
     if lmsensors.available():
         data["lm_sensors"] = lmsensors.normalized(warns)
         data["backends"].append("lm-sensors")
+    elif IS_LINUX:
+        warns.append(
+            f"lm-sensors not installed (limits voltages/power/fan data) — install: {deps.install_hint('lm-sensors')}"
+        )
     if nvidia.available():
         data["nvidia_gpu"] = nvidia.query(warns)
         data["backends"].append("nvidia-smi")
@@ -47,15 +52,34 @@ def gpu_status() -> dict[str, Any]:
     warns: list[str] = []
     gpus = nvidia.query(warns) if nvidia.available() else None
     if gpus is None:
-        warns.append("no NVIDIA GPU tooling; AMD/Intel telemetry not yet implemented")
+        warns.append(
+            f"nvidia-smi not found — install: {deps.install_hint('nvidia-smi')}. "
+            "AMD/Intel telemetry not yet implemented."
+        )
     return envelope("nvidia-smi", {"nvidia": gpus}, warns, ok=bool(gpus))
 
 
 def disk_health() -> dict[str, Any]:
     warns: list[str] = []
     if not smart.available():
-        return envelope("smartctl", None, ["smartctl (smartmontools) not installed"], ok=False)
+        return envelope(
+            "smartctl",
+            None,
+            [f"smartmontools not installed — install: {deps.install_hint('smartmontools')}"],
+            ok=False,
+        )
     return envelope("smartctl", smart.health(warns), warns)
+
+
+def check_dependencies() -> dict[str, Any]:
+    """Report which optional backends are present/missing, what each unlocks, and how to
+    install any that are missing (auto-detects the platform package manager)."""
+    report = deps.check()
+    warns = []
+    for m in report["missing"]:
+        tag = "REQUIRED" if m["required"] else "optional"
+        warns.append(f"[{tag}] {m['name']} missing — {m['install']}")
+    return envelope("hwprobe.deps", report, warns, ok=report["all_present"])
 
 
 def _psutil_env(fn) -> dict[str, Any]:

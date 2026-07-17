@@ -66,6 +66,16 @@ def system_snapshot() -> dict[str, Any]:
     return aggregate.system_snapshot()
 
 
+@mcp.tool()
+def check_dependencies() -> dict[str, Any]:
+    """Report which optional backends hwprobe uses are installed vs missing, what each one
+    unlocks, and the EXACT command to install any that are missing (auto-detects the
+    platform's package manager). Call this when another tool returns empty data or a
+    'not installed' warning — it tells the user precisely what to install.
+    """
+    return aggregate.check_dependencies()
+
+
 def run() -> None:
     """Run the MCP server over stdio (default transport)."""
     mcp.run()

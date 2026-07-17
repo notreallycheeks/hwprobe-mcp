@@ -11,10 +11,22 @@ def available() -> bool:
     return which("smartctl") is not None
 
 
-def scan(warns: list[str]) -> list[str]:
-    data, warn = run_json(["smartctl", "--scan-open", "-j"])
+def _json(args: list[str], warns: list[str], timeout: float = 25) -> Any:
+    """Run `smartctl -j <args>` and return parsed JSON. SMART reads need privilege, so when
+    not root we first try passwordless `sudo -n` (works only if a sudoers rule allows it) and
+    fall back to a direct call. Never raises."""
+    if not is_root() and which("sudo"):
+        data, _ = run_json(["sudo", "-n", "smartctl", "-j", *args], timeout=timeout)
+        if data is not None:
+            return data
+    data, warn = run_json(["smartctl", "-j", *args], timeout=timeout)
     if warn:
         warns.append(warn)
+    return data
+
+
+def scan(warns: list[str]) -> list[str]:
+    data = _json(["--scan-open"], warns)
     devices: list[str] = []
     if isinstance(data, dict):
         for dev in data.get("devices") or []:
@@ -27,9 +39,7 @@ def scan(warns: list[str]) -> list[str]:
 
 
 def device(dev: str, warns: list[str]) -> dict[str, Any]:
-    data, warn = run_json(["smartctl", "-j", "-a", dev], timeout=25)
-    if warn:
-        warns.append(warn)
+    data = _json(["-a", dev], warns, timeout=25)
     if not isinstance(data, dict):
         return {"device": dev, "error": "no SMART data (needs root?)"}
     return {
@@ -49,6 +59,9 @@ def device(dev: str, warns: list[str]) -> dict[str, Any]:
 
 def health(warns: list[str]) -> dict[str, Any]:
     if not is_root():
-        warns.append("smartctl: not running as root — SMART data may be denied or empty")
+        warns.append(
+            "smartctl needs root for SMART data — run the server as root, or grant "
+            "passwordless sudo for smartctl (see README). `sudo -n` is attempted automatically."
+        )
     devices = [device(d, warns) for d in scan(warns)]
     return {"root": is_root(), "devices": devices}

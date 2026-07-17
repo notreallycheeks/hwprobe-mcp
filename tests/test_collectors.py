@@ -121,3 +121,36 @@ def test_system_snapshot_children_are_envelopes():
     snap = aggregate.system_snapshot()["data"]
     for child in snap.values():
         assert {"ok", "platform", "sources", "warnings", "data"} <= set(child)
+
+
+# --- dependency doctor ---
+
+
+def test_check_dependencies_shape():
+    from hwprobe_mcp import deps
+
+    rep = deps.check()
+    assert isinstance(rep["dependencies"], list) and rep["dependencies"]
+    assert {"missing", "all_present", "package_manager", "missing_count"} <= set(rep)
+    names = {d["name"] for d in rep["dependencies"]}
+    assert "psutil" in names  # applies on every platform
+    for d in rep["dependencies"]:
+        assert {"name", "present", "enables", "install", "required"} <= set(d)
+        # a missing backend MUST carry an actionable install hint
+        if not d["present"]:
+            assert d["install"], f"{d['name']} missing without an install hint"
+
+
+def test_check_dependencies_tool_envelope():
+    resp = aggregate.check_dependencies()
+    assert {"ok", "platform", "sources", "warnings", "data"} <= set(resp)
+    assert isinstance(resp["data"]["missing"], list)
+
+
+def test_install_hint_lookup():
+    from hwprobe_mcp import deps
+
+    # resolvable by package key and by the binary it provides
+    assert deps.install_hint("smartmontools")
+    assert deps.install_hint("sensors")
+    assert deps.install_hint("does-not-exist") is None

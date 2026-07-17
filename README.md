@@ -31,6 +31,7 @@ Everything degrades gracefully: a missing tool, an absent GPU, or a lack of root
 | `gpu_status` | GPU inventory + live telemetry (NVIDIA via `nvidia-smi`: temp, util, power, clocks, memory). |
 | `disk_health` | Per-disk SMART: model, serial, firmware, capacity, temperature, SMART pass/fail, power-on hours, power cycles. |
 | `system_snapshot` | Everything above in a single call — the "tell me everything about this machine" tool. |
+| `check_dependencies` | Which optional backends are installed vs missing, what each unlocks, and the exact command to install any missing one (auto-detects the package manager). |
 
 Every tool returns a consistent envelope:
 
@@ -66,6 +67,30 @@ sudo sensors-detect --auto      # one-time, sets up lm-sensors
 
 > NVIDIA GPU telemetry uses the `nvidia-smi` binary shipped with the NVIDIA driver —
 > there is no pip extra to install.
+
+### Checking what's installed
+
+hwprobe works with whatever is present and degrades gracefully — but it will also *tell you*
+what's missing and how to install it. Run the built-in doctor:
+
+```bash
+hwprobe-mcp --doctor
+```
+
+...or have your agent call the **`check_dependencies`** tool. Each missing backend comes with the
+exact install command for your platform's package manager, and the JSON-returning tools embed the
+same hint in their `warnings`.
+
+Two backends need elevated privileges to return data — **`smartctl`** (disk SMART) and
+**`dmidecode`** (motherboard/BIOS/DIMM). Run the server as root, or grant *scoped* passwordless
+sudo just for smartctl so `disk_health` works from the unprivileged server:
+
+```bash
+echo "$USER ALL=(root) NOPASSWD: $(command -v smartctl)" | sudo tee /etc/sudoers.d/hwprobe-smartctl
+sudo chmod 0440 /etc/sudoers.d/hwprobe-smartctl
+```
+
+hwprobe automatically uses `sudo -n smartctl` when it isn't root, so no code changes are needed.
 
 ## Use with an MCP client
 
