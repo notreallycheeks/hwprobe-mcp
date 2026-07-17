@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hwprobe-mcp"
+version = "0.1.0"
+description = "MCP server giving AI agents deep hardware inventory + live sensor telemetry (temps, fans, voltages, power, GPU, disk SMART), cross-platform."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "notreallycheeks", email = "notreallycheeks@proton.me" }]
+keywords = [
+  "mcp", "model-context-protocol", "hardware", "sensors", "monitoring",
+  "psutil", "lm-sensors", "smart", "nvidia", "ai-agents", "telemetry",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Topic :: System :: Monitoring",
+  "Topic :: System :: Hardware",
+]
+dependencies = [
+  # 1.10.0 is the first release with FastMCP structured-output (derives tool
+  # output_schema from the return annotation); older versions silently degrade
+  # to text-only content.
+  "mcp>=1.10.0",
+  "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff>=0.4"]
+
+[project.scripts]
+hwprobe-mcp = "hwprobe_mcp.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/notreallycheeks/hwprobe-mcp"
+Issues = "https://github.com/notreallycheeks/hwprobe-mcp/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hwprobe_mcp"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
