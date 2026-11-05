@@ -211,3 +211,24 @@ def test_hub_store_and_app(tmp_path):
     # Stale marking.
     store._hosts["boxy"]["received_at"] -= 120
     assert store.fleet()["nodes"][0]["status"] == "stale"
+
+
+def test_service_python_stays_in_the_venv(tmp_path, monkeypatch):
+    from hwprobe_mcp.fleet import service
+
+    real = tmp_path / "base" / "python3"
+    real.parent.mkdir()
+    real.write_text("")
+    venv_py = tmp_path / "venv" / "bin" / "python"
+    venv_py.parent.mkdir(parents=True)
+    venv_py.symlink_to(real)
+    monkeypatch.setattr(service.sys, "executable", str(venv_py))
+    monkeypatch.setattr(service, "IS_WINDOWS", False)
+    assert service._python() == str(venv_py)
+
+
+def test_load_config_accepts_a_bom(tmp_path, monkeypatch):
+    cfg = tmp_path / "fleet.json"
+    cfg.write_bytes(b"\xef\xbb\xbf" + json.dumps({"hub": "http://hub-host:7790", "token": "t"}).encode())
+    monkeypatch.setenv("HWPROBE_FLEET_CONFIG", str(cfg))
+    assert discovery.load_config()["hub"] == "http://hub-host:7790"

@@ -26,11 +26,15 @@ if ($env:HWPROBE_FLEET_HUB) {
   New-Item -ItemType Directory -Force $cfgDir | Out-Null
   $cfgPath = Join-Path $cfgDir 'fleet.json'
   $cfg = @{}
-  if (Test-Path $cfgPath) { try { $cfg = Get-Content $cfgPath -Raw | ConvertFrom-Json -AsHashtable } catch { $cfg = @{} } }
+  if (Test-Path $cfgPath) {
+    # Windows PowerShell 5.1 has no ConvertFrom-Json -AsHashtable, so copy the properties over.
+    try { (Get-Content $cfgPath -Raw | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $cfg[$_.Name] = $_.Value } } catch { $cfg = @{} }
+  }
   $cfg.hub = $env:HWPROBE_FLEET_HUB.TrimEnd('/')
   if ($env:HWPROBE_FLEET_TOKEN) { $cfg.token = $env:HWPROBE_FLEET_TOKEN }
   if ($env:HWPROBE_FLEET_PORT) { $cfg.port = [int]$env:HWPROBE_FLEET_PORT }
-  $cfg | ConvertTo-Json | Set-Content -Encoding UTF8 $cfgPath
+  # UTF-8 without a BOM (Set-Content -Encoding UTF8 adds one on Windows PowerShell 5.1).
+  [IO.File]::WriteAllText($cfgPath, ($cfg | ConvertTo-Json), (New-Object Text.UTF8Encoding $false))
   Write-Host "wrote $cfgPath"
 }
 

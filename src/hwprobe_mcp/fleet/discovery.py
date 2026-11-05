@@ -32,7 +32,8 @@ def load_config() -> dict[str, Any]:
     p = config_path()
     try:
         if p.exists():
-            d = json.loads(p.read_text("utf-8"))
+            # utf-8-sig: Windows PowerShell 5.1 writes a BOM with -Encoding UTF8.
+            d = json.loads(p.read_text("utf-8-sig"))
             return d if isinstance(d, dict) else {}
     except Exception:
         pass

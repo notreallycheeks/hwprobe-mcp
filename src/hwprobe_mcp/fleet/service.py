@@ -17,7 +17,9 @@ MAC_LABEL = "dev.hwprobe.fleet"
 
 
 def _python() -> str:
-    exe = Path(sys.executable).resolve()
+    # No resolve(): a venv's python is a symlink to the base interpreter, and the service would
+    # then start outside the venv, where hwprobe_mcp is not installed.
+    exe = Path(os.path.abspath(sys.executable))
     if IS_WINDOWS:
         # pythonw keeps the agent off the taskbar/console.
         pw = exe.with_name("pythonw.exe")
