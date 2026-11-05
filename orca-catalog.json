@@ -1,0 +1,40 @@
+{
+  "catalogVersion": 2,
+  "name": "hwprobe",
+  "owner": "notreallycheeks",
+  "plugins": [
+    {
+      "id": "notreallycheeks.hwprobe-fleet",
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/notreallycheeks/hwprobe-mcp.git",
+        "ref": "main",
+        "path": "orca-plugin"
+      },
+      "description": "CPU, RAM, disk, GPU and Claude usage of every machine on the tailnet, from the hwprobe-fleet hub or the local agent.",
+      "categories": [
+        "monitoring"
+      ],
+      "releases": [
+        {
+          "version": "0.1.0",
+          "commit": "84c9f3f0db1333d7591ae45eec90c8a59463b1d4",
+          "contentHash": "86a67387c53630450352c5e62977957d0bef351c65ffa003b7fba580299ef968",
+          "execution": "trusted-worker",
+          "minimumOrca": "1.4.246",
+          "name": "Fleet",
+          "contributes": [
+            {
+              "kind": "panels",
+              "name": "Fleet"
+            }
+          ],
+          "capabilities": [
+            "storage:own",
+            "settings:own"
+          ]
+        }
+      ]
+    }
+  ]
+}

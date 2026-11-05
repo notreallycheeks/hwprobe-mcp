@@ -147,6 +147,15 @@ See [`deploy/README.md`](deploy/README.md): `docker compose -f deploy/docker-com
 on the machine that stays up, then `claude mcp add --transport http fleet-hub http://<host>:7790/mcp --header "Authorization: Bearer <token>"`
 on every machine. The hub only ever receives connections, so Docker NAT is fine.
 
+### Install the Orca panel
+
+This repository is also an Orca plugin catalog (`orca-catalog.json`). In Orca, open
+Settings → Plugins → Add catalog, enter `https://github.com/notreallycheeks/hwprobe-mcp.git`
+and install **Fleet**, or open
+`orca://plugins/notreallycheeks.hwprobe-fleet?catalog=https://github.com/notreallycheeks/hwprobe-mcp.git`.
+Then set the hub URL and token under Settings → Plugins → Fleet. For a new release, commit the
+plugin, run `orca plugin release-entry orca-plugin` and add its entry to the top of `releases`.
+
 ### Security model
 
 Agents listen only on loopback and the Tailscale address and refuse non-tailnet source IPs.
