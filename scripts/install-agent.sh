@@ -21,7 +21,11 @@ done
 [ -n "$PY" ] || { echo "python3 >= 3.10 is required (apt install python3-venv / brew install python)"; exit 1; }
 
 mkdir -p "$BASE"
-[ -x "$VENV/bin/python" ] || "$PY" -m venv "$VENV"
+# Rebuild a venv that has no working pip (a half-made one from a failed run, or a moved Python).
+if ! "$VENV/bin/python" -m pip --version >/dev/null 2>&1; then
+  rm -rf "$VENV"
+  "$PY" -m venv "$VENV" || { rm -rf "$VENV"; echo "could not create a venv with $PY; on Debian/Ubuntu: sudo apt install python3-venv"; exit 1; }
+fi
 "$VENV/bin/python" -m pip install -q --upgrade pip
 "$VENV/bin/python" -m pip install -q --upgrade "$SRC"
 
