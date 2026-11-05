@@ -236,6 +236,8 @@ def serve(
             continue
         start(host)
 
+    ts_checked = threading.Event()
+
     def watch_tailscale() -> None:
         while True:
             st = discovery.tailscale_status()
@@ -247,6 +249,7 @@ def serve(
                 _agent.tailscale_dns = (me.get("DNSName") or "").rstrip(".") or None
             if ip and ip not in servers and "tailscale" in wanted:
                 start(ip)
+            ts_checked.set()
             time.sleep(15 if ip else 10)
 
     threading.Thread(target=watch_tailscale, name="tailscale-watch", daemon=True).start()
@@ -256,6 +259,9 @@ def serve(
         token = hub_token or hub_client.hub_token()
 
         def push() -> None:
+            # The hub keys hosts by the Tailscale name, so wait for the first lookup: a report sent
+            # under the OS hostname (it differs on macOS) would leave a second entry that never clears.
+            ts_checked.wait(timeout=30)
             last_err = None
             while True:
                 try:
