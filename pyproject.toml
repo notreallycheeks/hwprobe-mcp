@@ -12,7 +12,7 @@ requires-python = ">=3.10"
 authors = [{ name = "notreallycheeks", email = "notreallycheeks@proton.me" }]
 keywords = [
   "mcp", "model-context-protocol", "hardware", "sensors", "monitoring",
-  "psutil", "lm-sensors", "smart", "nvidia", "ai-agents", "telemetry",
+  "psutil", "lm-sensors", "smart", "nvidia", "ai-agents", "telemetry", "fleet", "tailscale",
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -30,15 +30,19 @@ dependencies = [
   # 1.10.0 is the first release with FastMCP structured-output (derives tool
   # output_schema from the return annotation); older versions silently degrade
   # to text-only content.
-  "mcp>=1.10.0",
+  "mcp>=1.10.0,<2",
   "psutil>=5.9",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "ruff>=0.4"]
+# `hwprobe-fleet hub` serves MCP over HTTP; uvicorn/starlette already come with `mcp`, listed
+# here so a slim image can depend on exactly what the hub imports.
+hub = ["uvicorn>=0.23", "starlette>=0.27"]
 
 [project.scripts]
 hwprobe-mcp = "hwprobe_mcp.__main__:main"
+hwprobe-fleet = "hwprobe_mcp.fleet.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/notreallycheeks/hwprobe-mcp"

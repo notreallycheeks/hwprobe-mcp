@@ -1,0 +1,53 @@
+{
+  "manifestVersion": 2,
+  "id": "hwprobe-fleet",
+  "name": "Fleet",
+  "version": "0.1.0",
+  "description": "CPU, RAM, disk, GPU and Claude usage of every machine on the tailnet, from the hwprobe-fleet hub or the local agent.",
+  "engines": {
+    "orca": ">=1.4.246"
+  },
+  "execution": "trusted-worker",
+  "pluginApi": 1,
+  "main": "src/worker.ts",
+  "contributes": {
+    "panels": [
+      {
+        "id": "fleet",
+        "title": "Fleet",
+        "icon": "gauge",
+        "entry": "src/panel.tsx",
+        "ui": "components"
+      }
+    ],
+    "settings": [
+      {
+        "key": "url",
+        "title": "Fleet URL",
+        "description": "Hub (http://hub-host:7790) or local agent (http://127.0.0.1:7788). /v1/fleet is appended.",
+        "type": "string",
+        "default": "http://127.0.0.1:7788",
+        "placeholder": "http://hub-host:7790"
+      },
+      {
+        "key": "token",
+        "title": "Hub token",
+        "description": "Bearer token the hub was started with. Leave empty for a local agent.",
+        "type": "string",
+        "default": ""
+      },
+      {
+        "key": "refreshSeconds",
+        "title": "Refresh every (seconds)",
+        "type": "integer",
+        "default": 15,
+        "minimum": 5,
+        "maximum": 300
+      }
+    ]
+  },
+  "capabilities": [
+    { "kind": "storage:own" },
+    { "kind": "settings:own" }
+  ]
+}

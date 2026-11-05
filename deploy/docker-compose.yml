@@ -1,0 +1,21 @@
+# Central fleet hub. Run on the machine that stays up:
+#   cd hwprobe-mcp && HWPROBE_FLEET_TOKEN=<token> docker compose -f deploy/docker-compose.yml up -d --build
+# Then point every agent at it:  hwprobe-fleet serve --hub http://<this-host>:7790 --token <token>
+# and every MCP client at:       http://<this-host>:7790/mcp  (Authorization: Bearer <token>)
+services:
+  fleet-hub:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: hwprobe-fleet-hub:latest
+    container_name: hwprobe-fleet-hub
+    restart: unless-stopped
+    ports:
+      - "7790:7790"
+    environment:
+      # Leave unset to let the hub generate one (printed in `docker compose logs` and kept in the volume).
+      HWPROBE_FLEET_TOKEN: ${HWPROBE_FLEET_TOKEN:-}
+    volumes:
+      - fleet-data:/data
+volumes:
+  fleet-data:

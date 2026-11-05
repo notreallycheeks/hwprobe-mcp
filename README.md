@@ -31,6 +31,7 @@ Everything degrades gracefully: a missing tool, an absent GPU, or a lack of root
 | `gpu_status` | GPU inventory + live telemetry (NVIDIA via `nvidia-smi`: temp, util, power, clocks, memory). |
 | `disk_health` | Per-disk SMART: model, serial, firmware, capacity, temperature, SMART pass/fail, power-on hours, power cycles. |
 | `system_snapshot` | Everything above in a single call — the "tell me everything about this machine" tool. |
+| `fleet_status` / `pick_host` / `claude_usage` | Fleet view across every tailnet host, a ranked "where should this run" answer, and Claude account usage — see **Fleet** below. |
 | `check_dependencies` | Which optional backends are installed vs missing, what each unlocks, and the exact command to install any missing one (auto-detects the package manager). |
 
 Every tool returns a consistent envelope:
@@ -91,6 +92,67 @@ sudo chmod 0440 /etc/sudoers.d/hwprobe-smartctl
 ```
 
 hwprobe automatically uses `sudo -n smartctl` when it isn't root, so no code changes are needed.
+
+---
+
+## Fleet: every machine on your tailnet, in one view
+
+`hwprobe-fleet` turns hwprobe into a fleet monitor so an AI agent can see **which machine is
+busy and which is idle before it delegates work**. Each host runs a tiny agent; a hub (or any
+agent) aggregates them; agents read the result over MCP, CLI or HTTP.
+
+| Piece | Command | What it does |
+|-------|---------|--------------|
+| Agent | `hwprobe-fleet serve` / `install` | Serves this host's CPU %, RAM, disk, GPU and **Claude usage** on `:7788` (loopback + Tailscale IP only) and, with `--hub`, pushes it to the hub every 15 s |
+| Hub | `hwprobe-fleet hub` (or `deploy/docker-compose.yml`) | Collects reports on `:7790`, serves `/v1/fleet`, a dashboard at `/`, and **MCP over HTTP at `/mcp`** |
+| Client | `hwprobe-fleet`, `hwprobe-fleet pick --gpu` | Table / ranked recommendation, from the hub or by polling every Tailscale peer directly |
+| MCP tools | `fleet_status`, `pick_host`, `claude_usage`, `host_stats`, `fleet_table` | On the hub (HTTP) and in the stdio `hwprobe-mcp` server |
+| Orca panel | `orca-plugin/` | Right-sidebar "Fleet" panel in [Orca](https://onorca.dev) |
+| Skill | `skills/fleet-status/SKILL.md` | Tells Claude Code / Codex agents when and how to consult the fleet |
+
+### Claude usage
+
+For every Claude Code account signed in on a host (`~/.claude`, `$CLAUDE_CONFIG_DIR`, Orca
+managed-account folders), the agent reports email, plan, the **5-hour** and **7-day** windows,
+per-model weekly windows and reset times — the same numbers as Claude Code's `/usage` — plus
+whatever [Orca](https://onorca.dev) tracks (`orca account list --json`) when Orca is installed.
+Tokens are read only to make that request and never leave the machine.
+
+```
+HOST     OS     STATUS  CPU  RAM           DISK                       GPU             CLAUDE (5h / 7d / per-model)       AGE
+alpha*   Linux  ok      5%   12/64G (19%)  310G free/954G (68% used)  RTX 4070 2%     me@example.com 5h:93% 7d:31% f:24% 2s
+```
+
+### Install the agent on a machine
+
+```bash
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/notreallycheeks/hwprobe-mcp/main/scripts/install-agent.sh | \
+  HWPROBE_FLEET_HUB=http://hub-host:7790 HWPROBE_FLEET_TOKEN=<token> bash
+```
+
+```powershell
+# Windows
+$env:HWPROBE_FLEET_HUB='http://hub-host:7790'; $env:HWPROBE_FLEET_TOKEN='<token>'
+irm https://raw.githubusercontent.com/notreallycheeks/hwprobe-mcp/main/scripts/install-agent.ps1 | iex
+```
+
+Both create a venv, install this package, write `fleet.json`, and register a login service
+(systemd --user / launchd / Task Scheduler). Leave the hub variables out to run peer-to-peer
+only. Everything is per-user; nothing needs root.
+
+### Run the hub
+
+See [`deploy/README.md`](deploy/README.md): `docker compose -f deploy/docker-compose.yml up -d`
+on the machine that stays up, then `claude mcp add --transport http fleet-hub http://<host>:7790/mcp --header "Authorization: Bearer <token>"`
+on every machine. The hub only ever receives connections, so Docker NAT is fine.
+
+### Security model
+
+Agents listen only on loopback and the Tailscale address and refuse non-tailnet source IPs.
+The hub requires a bearer token (generated on first start if you do not set one) because its
+Docker port is reachable from every interface of its host. Reports carry hostnames, resource
+figures and Claude account e-mails/usage — fine for a personal tailnet, so keep the token private.
 
 ## Use with an MCP client
 
