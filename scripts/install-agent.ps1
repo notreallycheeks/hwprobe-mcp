@@ -20,6 +20,8 @@ if (-not (Test-Path (Join-Path $venv 'Scripts\python.exe'))) { & cmd /c "$py -m 
 $vpy = Join-Path $venv 'Scripts\python.exe'
 & $vpy -m pip install -q --upgrade pip
 & $vpy -m pip install -q --upgrade $src
+# A newer commit with the same version number counts as installed, so reinstall the package itself.
+& $vpy -m pip install -q --force-reinstall --no-deps $src
 
 if ($env:HWPROBE_FLEET_HUB) {
   $cfgDir = Join-Path $env:APPDATA 'hwprobe'

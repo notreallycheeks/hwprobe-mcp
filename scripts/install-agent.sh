@@ -28,6 +28,8 @@ if ! "$VENV/bin/python" -m pip --version >/dev/null 2>&1; then
 fi
 "$VENV/bin/python" -m pip install -q --upgrade pip
 "$VENV/bin/python" -m pip install -q --upgrade "$SRC"
+# A newer commit with the same version number counts as installed, so reinstall the package itself.
+"$VENV/bin/python" -m pip install -q --force-reinstall --no-deps "$SRC"
 
 # Persist hub settings so the login service finds them without environment variables.
 if [ -n "${HWPROBE_FLEET_HUB:-}" ]; then
